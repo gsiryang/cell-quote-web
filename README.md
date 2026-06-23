@@ -1,0 +1,39 @@
+# 电芯报价查询网页版
+
+这是可直接部署到 GitHub Pages 的纯静态版本，不需要服务器。
+
+## 功能
+
+- 批量查询手机型号或电芯尺寸
+- 修改成交价、填写数量
+- 生成 Excel 送货单
+- 按“电池 + MAH”合并数量并生成 Excel 取货单
+- 不包含库存、仓库位置和客户历史报价查询
+
+## 更新报价数据
+
+在项目根目录更新 `报价/报价/报价.xlsx` 后运行：
+
+```powershell
+python web/tools/build_web_data.py
+```
+
+脚本会生成：
+
+- `web/data/quotes.json`：网页实际读取的数据
+- `web/data/网页报价数据.xlsx`：可检查、可随网站一起提交的脱敏表格
+
+只会发布“电池型号、电芯尺寸、外观、容量、单价”，不会发布客户、日期、单号、历史数量等字段。
+
+## 本地预览
+
+```powershell
+cd web
+python -m http.server 8765
+```
+
+浏览器访问 `http://localhost:8765/`。
+
+## GitHub Pages
+
+可以将 `web` 目录内容作为 Pages 发布目录，或将它复制到仓库的 `docs` 目录后选择 `main /docs` 发布。

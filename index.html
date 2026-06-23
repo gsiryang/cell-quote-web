@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b6bcb">
+  <title>电芯报价查询</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">CELL QUOTE</p>
+      <h1>电芯报价查询</h1>
+      <p class="subtitle">批量查询 · 灵活改价 · 生成送货单与取货单</p>
+    </div>
+    <div id="dataStatus" class="status-pill">正在读取报价数据…</div>
+  </header>
+
+  <main>
+    <section class="panel query-panel">
+      <div class="section-heading">
+        <div><span class="step">01</span><h2>批量查询</h2></div>
+        <button id="clearBtn" class="button ghost" type="button">清空</button>
+      </div>
+      <label for="queryInput">每行输入一个手机型号或电芯尺寸</label>
+      <textarea id="queryInput" rows="6" placeholder="例如：&#10;iPhone 15&#10;SPARK5&#10;456495"></textarea>
+      <div class="query-actions">
+        <span id="queryHint" class="muted">支持忽略型号中的空格和大小写</span>
+        <button id="queryBtn" class="button primary" type="button">开始查询</button>
+      </div>
+    </section>
+
+    <section class="panel document-panel">
+      <div class="section-heading"><div><span class="step">02</span><h2>单据信息</h2></div></div>
+      <div class="field-grid">
+        <label>客户名称<input id="customerInput" type="text" placeholder="可选"></label>
+        <label>单据日期<input id="dateInput" type="date"></label>
+        <label>单号<input id="orderInput" type="text" placeholder="可选"></label>
+      </div>
+    </section>
+
+    <section class="panel result-panel">
+      <div class="section-heading">
+        <div><span class="step">03</span><h2>查询结果与改价</h2></div>
+        <span id="resultCount" class="muted">0 条</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>查询内容</th><th>电池型号</th><th>电芯尺寸</th><th>外观</th><th>MAH</th><th>基础单价</th><th>成交价</th><th>数量</th><th></th></tr></thead>
+          <tbody id="resultBody"><tr class="empty-row"><td colspan="9">输入型号后开始查询</td></tr></tbody>
+        </table>
+      </div>
+      <div class="summary-row">
+        <span>合计数量：<strong id="totalQty">0</strong></span>
+        <span>合计金额：<strong id="totalAmount">¥0.00</strong></span>
+      </div>
+      <div class="export-actions">
+        <button id="deliveryBtn" class="button secondary" type="button" disabled>生成送货单</button>
+        <button id="pickupBtn" class="button primary" type="button" disabled>生成取货单</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <footer>网页仅包含公开报价数据，不包含库存、仓库位置及客户历史记录。</footer>
+  <script src="app.js"></script>
+</body>
+</html>
