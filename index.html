@@ -17,7 +17,7 @@
     <div id="dataStatus" class="status-pill">正在读取报价数据…</div>
   </header>
 
-  <main>
+  <main id="queryView" class="app-view active">
     <section class="panel query-panel">
       <div class="section-heading">
         <div><span class="step">01</span><h2>批量查询</h2></div>
@@ -27,7 +27,10 @@
       <textarea id="queryInput" rows="6" placeholder="例如：&#10;iPhone 15&#10;SPARK5&#10;456495"></textarea>
       <div class="query-actions">
         <span id="queryHint" class="muted">支持忽略型号中的空格和大小写</span>
-        <button id="queryBtn" class="button primary" type="button">开始查询</button>
+        <div class="inline-actions">
+          <a class="button ghost link-button" href="data/网页报价数据.xlsx" download>下载报价表</a>
+          <button id="queryBtn" class="button primary" type="button">开始查询</button>
+        </div>
       </div>
     </section>
 
@@ -61,6 +64,52 @@
       </div>
     </section>
   </main>
+
+  <main id="counterView" class="app-view counter-view" hidden>
+    <section class="panel counter-upload-panel">
+      <div class="section-heading"><div><span class="step">01</span><h2>导入出货 Excel</h2></div></div>
+      <div class="requirement-box">
+        <b>推荐标题：</b>电池型号、电芯尺寸、MAH、数量<br>
+        电芯尺寸为空时使用电池型号；相同“电池＋MAH”的数量自动汇总。不查询库存位置。
+      </div>
+      <label class="file-picker" for="counterFile">
+        <span>选择 .xlsx 文件</span>
+        <small id="counterFileName">尚未选择文件</small>
+      </label>
+      <input id="counterFile" class="visually-hidden" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      <p id="counterStatus" class="muted">请导入包含出货明细的 Excel 文件</p>
+    </section>
+
+    <section class="panel counter-info-panel">
+      <div class="section-heading"><div><span class="step">02</span><h2>取货单信息</h2></div></div>
+      <div class="field-grid two-fields">
+        <label>客户名称<input id="counterCustomer" type="text" placeholder="可选"></label>
+        <label>单据日期<input id="counterDate" type="date"></label>
+      </div>
+    </section>
+
+    <section class="panel counter-result-panel">
+      <div class="section-heading">
+        <div><span class="step">03</span><h2>取货计数结果</h2></div>
+        <span id="counterCount" class="muted">0 条</span>
+      </div>
+      <div class="table-wrap">
+        <table class="counter-table">
+          <thead><tr><th>电池</th><th>MAH</th><th>数量</th><th></th></tr></thead>
+          <tbody id="counterBody"><tr class="empty-row"><td colspan="4">导入 Excel 后显示汇总结果</td></tr></tbody>
+        </table>
+      </div>
+      <div class="export-actions">
+        <button id="counterClearBtn" class="button ghost" type="button">清空</button>
+        <button id="counterPickupBtn" class="button primary" type="button" disabled>生成取货单</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="功能导航">
+    <button class="nav-item active" data-view="queryView" type="button"><span class="nav-icon">⌕</span><span>型号查询</span></button>
+    <button class="nav-item" data-view="counterView" type="button"><span class="nav-icon">∑</span><span>取货计数</span></button>
+  </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <footer>网页仅包含公开报价数据，不包含库存、仓库位置及客户历史记录。</footer>
