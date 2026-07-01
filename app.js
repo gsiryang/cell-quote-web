@@ -356,22 +356,37 @@ function aggregateCounterRows(rows) {
     const capacity = text(row[capacityIndex]);
     const quantity = text(row[quantityIndex]);
     if (!battery) continue;
-    const key = `${normalize(battery)}\u0000${capacity}`;
-    if (!grouped.has(key)) grouped.set(key, { id: `counter-${grouped.size}`, battery, capacity, quantity });
-    else grouped.get(key).quantity = mergeQuantity(grouped.get(key).quantity, quantity);
+    const groupType = size ? "size" : "model";
+    const key = `${groupType}\u0000${normalize(battery)}\u0000${capacity}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        id: `counter-${grouped.size}`, battery, capacity, quantity,
+        models: new Set(size && model ? [model] : [])
+      });
+    } else {
+      grouped.get(key).quantity = mergeQuantity(grouped.get(key).quantity, quantity);
+      if (size && model) grouped.get(key).models.add(model);
+    }
   }
   if (!grouped.size) throw new Error("Excel 中没有可用的出货明细");
-  return [...grouped.values()];
+  return [...grouped.values()].map((row) => ({
+    id: row.id,
+    battery: row.battery,
+    capacity: row.capacity,
+    quantity: row.quantity,
+    remark: [...row.models].join("/")
+  }));
 }
 
 function renderCounter() {
   if (!state.counterRows.length) {
-    els.counterBody.innerHTML = '<tr class="empty-row"><td colspan="4">导入 Excel 后显示汇总结果</td></tr>';
+    els.counterBody.innerHTML = '<tr class="empty-row"><td colspan="5">导入 Excel 后显示汇总结果</td></tr>';
   } else {
     els.counterBody.innerHTML = state.counterRows.map((row) => `<tr data-counter-id="${row.id}">
       <td><input data-counter-field="battery" value="${xml(row.battery)}"></td>
       <td><input data-counter-field="capacity" value="${xml(row.capacity)}"></td>
       <td><input data-counter-field="quantity" value="${xml(row.quantity)}"></td>
+      <td><input data-counter-field="remark" value="${xml(row.remark)}" placeholder="电池型号备注"></td>
       <td><button class="remove-btn" data-counter-action="remove">删除</button></td></tr>`).join("");
   }
   els.counterCount.textContent = `${state.counterRows.length} 条`;
@@ -402,8 +417,8 @@ async function importCounterFile(file) {
 
 function exportCounterPickup() {
   if (!state.counterRows.length) return showToast("请先导入出货 Excel");
-  const values = state.counterRows.map((row) => [row.battery, row.capacity, optionalNumber(row.quantity) ?? row.quantity]);
-  downloadWorkbook("取货单", ["电池", "MAH", "数量"], values, {
+  const values = state.counterRows.map((row) => [row.battery, row.capacity, optionalNumber(row.quantity) ?? row.quantity, row.remark]);
+  downloadWorkbook("取货单", ["电池", "MAH", "数量", "备注"], values, {
     customer: text(els.counterCustomer.value), date: els.counterDate.value || today(), order: ""
   });
 }
@@ -451,11 +466,12 @@ document.documentElement.dataset.xlsxCheck = `${selfTestXlsx[0]},${selfTestXlsx[
 if (new URLSearchParams(location.search).has("selftest")) {
   const aggregateTest = aggregateCounterRows([
     ["电池型号", "电芯尺寸", "MAH", "数量"],
+    ["49FT", "456494", "3200", "10"],
+    ["49IT", "456494", "3200", "20"],
     ["iPhone 15", "", "3300", "2"],
-    ["iPhone 15", "", "3300", "3"],
-    ["其他", "456495", "3500", "4"]
+    ["iPhone 15", "", "3300", "3"]
   ]);
-  document.documentElement.dataset.aggregateCheck = aggregateTest.map((row) => `${row.battery}:${row.capacity}:${row.quantity}`).join("|");
+  document.documentElement.dataset.aggregateCheck = aggregateTest.map((row) => `${row.battery}:${row.capacity}:${row.quantity}:${row.remark}`).join("|");
   fetch("data/网页报价数据.xlsx", { cache: "no-store" }).then((response) => response.arrayBuffer()).then(parseFirstWorksheet).then((rows) => {
     document.documentElement.dataset.importCheck = rows[0]?.slice(0, 5).join("|") || "empty";
   }).catch((error) => { document.documentElement.dataset.importCheck = `error:${error.message}`; });

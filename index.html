@@ -70,7 +70,7 @@
       <div class="section-heading"><div><span class="step">01</span><h2>导入出货 Excel</h2></div></div>
       <div class="requirement-box">
         <b>推荐标题：</b>电池型号、电芯尺寸、MAH、数量<br>
-        电芯尺寸为空时使用电池型号；相同“电池＋MAH”的数量自动汇总。不查询库存位置。
+        有尺寸时按“电芯尺寸＋MAH”汇总，并把型号写入备注；尺寸为空时仍按“电池型号＋MAH”汇总。不查询库存位置。
       </div>
       <label class="file-picker" for="counterFile">
         <span>选择 .xlsx 文件</span>
@@ -95,8 +95,8 @@
       </div>
       <div class="table-wrap">
         <table class="counter-table">
-          <thead><tr><th>电池</th><th>MAH</th><th>数量</th><th></th></tr></thead>
-          <tbody id="counterBody"><tr class="empty-row"><td colspan="4">导入 Excel 后显示汇总结果</td></tr></tbody>
+          <thead><tr><th>电池</th><th>MAH</th><th>数量</th><th>备注</th><th></th></tr></thead>
+          <tbody id="counterBody"><tr class="empty-row"><td colspan="5">导入 Excel 后显示汇总结果</td></tr></tbody>
         </table>
       </div>
       <div class="export-actions">
