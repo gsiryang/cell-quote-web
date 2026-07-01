@@ -102,11 +102,11 @@ function uniqueJoined(records, field) {
 
 function groupQueryMatches(matches) {
   const result = [], groupIndexes = new Map();
-  for (const { query, record } of matches) {
+  for (const [inputOrder, { query, record }] of matches.entries()) {
     if (!record) {
       result.push({
         id: `query-${Date.now()}-${result.length}`, query, queries: [query], model: "未找到", models: [],
-        size: "", appearance: "", capacity: "", basePrice: "", finalPrice: "", quantity: "", found: false
+        modelEntries: [], size: "", appearance: "", capacity: "", basePrice: "", finalPrice: "", quantity: "", found: false
       });
       continue;
     }
@@ -114,8 +114,9 @@ function groupQueryMatches(matches) {
     if (!groupIndexes.has(groupKey)) {
       const row = {
         id: `query-${Date.now()}-${result.length}`, query, queries: [query], model: record.model, models: [record.model],
-        records: [record], size: record.size, appearance: record.appearance, capacity: record.capacity,
-        basePrice: record.price, finalPrice: record.price, quantity: "", found: true
+        modelEntries: [{ model: record.model, query, inputOrder }],
+        records: [record], size: record.size, appearance: record.appearance, capacity: "",
+        basePrice: record.price, finalPrice: "", quantity: "", found: true
       };
       groupIndexes.set(groupKey, result.length);
       result.push(row);
@@ -123,23 +124,30 @@ function groupQueryMatches(matches) {
     }
     const row = result[groupIndexes.get(groupKey)];
     if (!row.queries.includes(query)) row.queries.push(query);
-    if (!row.models.includes(record.model)) row.models.push(record.model);
+    if (!row.models.includes(record.model)) {
+      row.models.push(record.model);
+      row.modelEntries.push({ model: record.model, query, inputOrder });
+    }
     row.records.push(record);
     row.query = row.queries.join("/");
     row.model = row.models.join("/");
     row.appearance = uniqueJoined(row.records, "appearance");
-    row.capacity = uniqueJoined(row.records, "capacity");
     row.basePrice = uniqueJoined(row.records, "price");
-    row.finalPrice = row.basePrice;
   }
   return result;
 }
 
 function expandModelRows(rows) {
-  return rows.filter((row) => row.found).flatMap((row) => {
-    const models = row.models?.length ? row.models : [row.model];
-    return models.map((model) => ({ ...row, model, query: model, models: [model] }));
-  });
+  return rows.filter((row) => row.found).flatMap((row, rowOrder) => {
+    const entries = row.modelEntries?.length
+      ? row.modelEntries
+      : (row.models?.length ? row.models : [row.model]).map((model, index) => ({
+          model, query: model, inputOrder: rowOrder * 10000 + index
+        }));
+    return entries.map((entry) => ({
+      ...row, model: entry.model, query: entry.query, models: [entry.model], inputOrder: entry.inputOrder
+    }));
+  }).sort((left, right) => left.inputOrder - right.inputOrder);
 }
 
 function modelSummaryLabel(models) {
@@ -157,7 +165,7 @@ function render() {
         : `<span class="not-found">未找到：${xml(row.query)}</span>`}</td>
       <td><input data-field="size" value="${xml(row.size)}" placeholder="填写尺寸" ${row.found ? "" : "disabled"}></td>
       <td><input class="capacity-input" data-field="capacity" value="${xml(row.capacity)}" placeholder="填写容量" ${row.found ? "" : "disabled"}></td>
-      <td><input class="price-input" data-field="finalPrice" value="${xml(row.finalPrice)}" ${row.found ? "" : "disabled"}></td>
+      <td><input class="price-input" data-field="finalPrice" value="${xml(row.finalPrice)}" placeholder="填写单价" ${row.found ? "" : "disabled"}></td>
       <td><input inputmode="decimal" data-field="quantity" value="${xml(row.quantity)}" placeholder="0" ${row.found ? "" : "disabled"}></td>
       <td><button class="remove-btn" data-action="remove" title="移除">删除</button></td></tr>`).join("");
   }
@@ -573,6 +581,13 @@ if (new URLSearchParams(location.search).has("selftest")) {
   const queryExpandTest = expandModelRows(queryGroupTest);
   document.documentElement.dataset.queryGroupCheck =
     `${queryGroupTest.length}:${queryGroupTest[0].model}:${queryExpandTest.map((row) => row.model).join(",")}`;
+  const orderTest = groupQueryMatches([
+    { query: "A", record: { model: "A", size: "SIZE-1", appearance: "", capacity: "", price: "" } },
+    { query: "B", record: { model: "B", size: "SIZE-2", appearance: "", capacity: "", price: "" } },
+    { query: "C", record: { model: "C", size: "SIZE-1", appearance: "", capacity: "", price: "" } }
+  ]);
+  document.documentElement.dataset.deliveryOrderCheck =
+    expandModelRows(orderTest).map((row) => row.model).join("/");
   const aggregateTest = aggregateCounterRows([
     ["电池型号", "电芯尺寸", "MAH", "数量"],
     ["49FT", "456494", "3200", "10"],
