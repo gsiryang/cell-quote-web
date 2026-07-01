@@ -3,7 +3,8 @@ const $ = (selector) => document.querySelector(selector);
 const els = {
   status: $("#dataStatus"), query: $("#queryInput"), body: $("#resultBody"), count: $("#resultCount"),
   customer: $("#customerInput"), date: $("#dateInput"), order: $("#orderInput"),
-  delivery: $("#deliveryBtn"), pickup: $("#pickupBtn"), qty: $("#totalQty"), amount: $("#totalAmount"), toast: $("#toast"),
+  copyQuote: $("#copyQuoteBtn"), delivery: $("#deliveryBtn"), pickup: $("#pickupBtn"),
+  qty: $("#totalQty"), amount: $("#totalAmount"), toast: $("#toast"),
   counterFile: $("#counterFile"), counterFileName: $("#counterFileName"), counterStatus: $("#counterStatus"),
   counterBody: $("#counterBody"), counterCount: $("#counterCount"), counterPickup: $("#counterPickupBtn"),
   counterCustomer: $("#counterCustomer"), counterDate: $("#counterDate"),
@@ -183,7 +184,7 @@ function updateSummary() {
   }, 0);
   els.qty.textContent = qty.toLocaleString("zh-CN", { maximumFractionDigits: 2 });
   els.amount.textContent = `¥${amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  els.delivery.disabled = els.pickup.disabled = !valid.length;
+  els.copyQuote.disabled = els.delivery.disabled = els.pickup.disabled = !valid.length;
 }
 
 els.body.addEventListener("input", (event) => {
@@ -234,22 +235,52 @@ els.body.addEventListener("focusin", (event) => {
 });
 els.modelHoverCard.addEventListener("mouseenter", () => clearTimeout(modelCardTimer));
 els.modelHoverCard.addEventListener("mouseleave", scheduleHideModelCard);
-els.copyModels.addEventListener("click", async () => {
+async function copyText(value) {
   try {
-    await navigator.clipboard.writeText(els.modelHoverText.value);
-    showToast("型号已复制");
+    await navigator.clipboard.writeText(value);
+    return true;
   } catch {
-    els.modelHoverText.focus();
-    els.modelHoverText.select();
-    document.execCommand("copy");
-    showToast("型号已复制");
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    return copied;
   }
+}
+
+els.copyModels.addEventListener("click", async () => {
+  const copied = await copyText(els.modelHoverText.value);
+  showToast(copied ? "型号已复制" : "复制失败，请允许浏览器访问剪贴板");
 });
 
 function documentRows() {
   const rows = state.rows.filter((row) => row.found);
   if (!rows.length) showToast("没有可生成单据的查询结果");
   return rows;
+}
+
+function buildCopyQuoteText(rows) {
+  return expandModelRows(rows).map((row) =>
+    `${text(row.model)}-${text(row.size)}/${text(row.capacity)}-${text(row.finalPrice)}`
+  ).join("\n");
+}
+
+async function copyQuote() {
+  const groupedRows = documentRows();
+  if (!groupedRows.length) return;
+  const incomplete = groupedRows.some((row) =>
+    !text(row.size) || !text(row.capacity) || !text(row.finalPrice)
+  );
+  if (incomplete) return showToast("请先填写完整的尺寸、容量和单价");
+  const rows = expandModelRows(groupedRows);
+  const copied = await copyText(buildCopyQuoteText(groupedRows));
+  showToast(copied ? `已复制 ${rows.length} 个型号报价` : "复制失败，请允许浏览器访问剪贴板");
 }
 
 function exportDelivery() {
@@ -546,6 +577,7 @@ function switchView(viewId) {
 
 $("#queryBtn").addEventListener("click", runQuery);
 $("#clearBtn").addEventListener("click", () => { els.query.value = ""; state.rows = []; render(); });
+els.copyQuote.addEventListener("click", copyQuote);
 els.delivery.addEventListener("click", exportDelivery);
 els.pickup.addEventListener("click", exportPickup);
 els.query.addEventListener("keydown", (event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") runQuery(); });
@@ -568,7 +600,7 @@ for (const navItem of document.querySelectorAll(".nav-item")) navItem.addEventLi
 els.date.value = today();
 els.counterDate.value = today();
 window.__quoteApp = {
-  state, runQuery, buildXlsx, findRecord, exportDelivery, exportPickup,
+  state, runQuery, buildXlsx, findRecord, exportDelivery, exportPickup, buildCopyQuoteText,
   parseFirstWorksheet, aggregateCounterRows, groupQueryMatches, expandModelRows, modelSummaryLabel
 };
 const selfTestXlsx = buildXlsx("测试", ["电池", "MAH", "数量"], [["456495", "3200", 1]], { customer: "", date: today(), order: "" });
