@@ -267,7 +267,7 @@ function documentRows() {
 
 function buildCopyQuoteText(rows) {
   return expandModelRows(rows).map((row) =>
-    `${text(row.model)}-${text(row.size)}/${text(row.capacity)}-${text(row.finalPrice)}`
+    `${text(row.query || row.model)}-${text(row.size)}/${text(row.capacity)}-${text(row.finalPrice)}`
   ).join("\n");
 }
 
