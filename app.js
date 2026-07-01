@@ -184,7 +184,7 @@ function updateSummary() {
   }, 0);
   els.qty.textContent = qty.toLocaleString("zh-CN", { maximumFractionDigits: 2 });
   els.amount.textContent = `¥${amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  els.copyQuote.disabled = els.delivery.disabled = els.pickup.disabled = !valid.length;
+  els.delivery.disabled = els.pickup.disabled = !valid.length;
 }
 
 els.body.addEventListener("input", (event) => {
