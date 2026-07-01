@@ -50,8 +50,8 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>查询内容</th><th>电池型号</th><th>电芯尺寸</th><th>外观</th><th>MAH</th><th>基础单价</th><th>成交价</th><th>数量</th><th></th></tr></thead>
-          <tbody id="resultBody"><tr class="empty-row"><td colspan="9">输入型号后开始查询</td></tr></tbody>
+          <thead><tr><th>型号详情</th><th>尺寸</th><th>容量</th><th>单价</th><th>数量</th><th></th></tr></thead>
+          <tbody id="resultBody"><tr class="empty-row"><td colspan="6">输入型号后开始查询</td></tr></tbody>
         </table>
       </div>
       <div class="summary-row">
@@ -110,6 +110,11 @@
     <button class="nav-item active" data-view="queryView" type="button"><span class="nav-icon">⌕</span><span>型号查询</span></button>
     <button class="nav-item" data-view="counterView" type="button"><span class="nav-icon">∑</span><span>取货计数</span></button>
   </nav>
+
+  <div id="modelHoverCard" class="model-hover-card" hidden>
+    <div class="model-hover-heading"><strong>完整型号详情</strong><button id="copyModelsBtn" type="button">复制全部</button></div>
+    <textarea id="modelHoverText" readonly aria-label="完整型号详情"></textarea>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <footer>网页仅包含公开报价数据，不包含库存、仓库位置及客户历史记录。</footer>

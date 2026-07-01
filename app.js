@@ -6,7 +6,8 @@ const els = {
   delivery: $("#deliveryBtn"), pickup: $("#pickupBtn"), qty: $("#totalQty"), amount: $("#totalAmount"), toast: $("#toast"),
   counterFile: $("#counterFile"), counterFileName: $("#counterFileName"), counterStatus: $("#counterStatus"),
   counterBody: $("#counterBody"), counterCount: $("#counterCount"), counterPickup: $("#counterPickupBtn"),
-  counterCustomer: $("#counterCustomer"), counterDate: $("#counterDate")
+  counterCustomer: $("#counterCustomer"), counterDate: $("#counterDate"),
+  modelHoverCard: $("#modelHoverCard"), modelHoverText: $("#modelHoverText"), copyModels: $("#copyModelsBtn")
 };
 
 const normalize = (value) => String(value ?? "").replace(/\s+/g, "").toLowerCase();
@@ -141,13 +142,21 @@ function expandModelRows(rows) {
   });
 }
 
+function modelSummaryLabel(models) {
+  const visible = models.slice(0, 2).join("/");
+  return models.length > 2 ? `${visible}…（共 ${models.length} 个）` : visible;
+}
+
 function render() {
   if (!state.rows.length) {
-    els.body.innerHTML = '<tr class="empty-row"><td colspan="9">输入型号后开始查询</td></tr>';
+    els.body.innerHTML = '<tr class="empty-row"><td colspan="6">输入型号后开始查询</td></tr>';
   } else {
     els.body.innerHTML = state.rows.map((row) => `<tr data-id="${row.id}">
-      <td>${xml(row.query)}</td><td class="${row.found ? "" : "not-found"}">${xml(row.model)}</td>
-      <td>${xml(row.size)}</td><td>${xml(row.appearance)}</td><td><input class="capacity-input" data-field="capacity" value="${xml(row.capacity)}" placeholder="填写容量" ${row.found ? "" : "disabled"}></td><td>${xml(row.basePrice)}</td>
+      <td>${row.found
+        ? `<button class="model-summary" data-model-row="${row.id}" type="button">${xml(modelSummaryLabel(row.models))}</button>`
+        : `<span class="not-found">未找到：${xml(row.query)}</span>`}</td>
+      <td><input data-field="size" value="${xml(row.size)}" placeholder="填写尺寸" ${row.found ? "" : "disabled"}></td>
+      <td><input class="capacity-input" data-field="capacity" value="${xml(row.capacity)}" placeholder="填写容量" ${row.found ? "" : "disabled"}></td>
       <td><input class="price-input" data-field="finalPrice" value="${xml(row.finalPrice)}" ${row.found ? "" : "disabled"}></td>
       <td><input inputmode="decimal" data-field="quantity" value="${xml(row.quantity)}" placeholder="0" ${row.found ? "" : "disabled"}></td>
       <td><button class="remove-btn" data-action="remove" title="移除">删除</button></td></tr>`).join("");
@@ -181,6 +190,52 @@ els.body.addEventListener("click", (event) => {
   const rowElement = event.target.closest("tr[data-id]");
   state.rows = state.rows.filter((row) => row.id !== rowElement.dataset.id);
   render();
+});
+
+let modelCardTimer;
+function showModelCard(target) {
+  const row = state.rows.find((item) => item.id === target.dataset.modelRow);
+  if (!row) return;
+  clearTimeout(modelCardTimer);
+  els.modelHoverText.value = row.models.join("/");
+  els.modelHoverCard.hidden = false;
+  const rect = target.getBoundingClientRect();
+  const cardWidth = Math.min(420, window.innerWidth - 24);
+  els.modelHoverCard.style.width = `${cardWidth}px`;
+  els.modelHoverCard.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - cardWidth - 12))}px`;
+  requestAnimationFrame(() => {
+    const height = els.modelHoverCard.offsetHeight;
+    const below = rect.bottom + 8;
+    els.modelHoverCard.style.top = `${below + height <= window.innerHeight - 12 ? below : Math.max(12, rect.top - height - 8)}px`;
+  });
+}
+function scheduleHideModelCard() {
+  clearTimeout(modelCardTimer);
+  modelCardTimer = setTimeout(() => { els.modelHoverCard.hidden = true; }, 220);
+}
+els.body.addEventListener("mouseover", (event) => {
+  const target = event.target.closest(".model-summary");
+  if (target) showModelCard(target);
+});
+els.body.addEventListener("mouseout", (event) => {
+  if (event.target.closest(".model-summary")) scheduleHideModelCard();
+});
+els.body.addEventListener("focusin", (event) => {
+  const target = event.target.closest(".model-summary");
+  if (target) showModelCard(target);
+});
+els.modelHoverCard.addEventListener("mouseenter", () => clearTimeout(modelCardTimer));
+els.modelHoverCard.addEventListener("mouseleave", scheduleHideModelCard);
+els.copyModels.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(els.modelHoverText.value);
+    showToast("型号已复制");
+  } catch {
+    els.modelHoverText.focus();
+    els.modelHoverText.select();
+    document.execCommand("copy");
+    showToast("型号已复制");
+  }
 });
 
 function documentRows() {
@@ -506,7 +561,7 @@ els.date.value = today();
 els.counterDate.value = today();
 window.__quoteApp = {
   state, runQuery, buildXlsx, findRecord, exportDelivery, exportPickup,
-  parseFirstWorksheet, aggregateCounterRows, groupQueryMatches, expandModelRows
+  parseFirstWorksheet, aggregateCounterRows, groupQueryMatches, expandModelRows, modelSummaryLabel
 };
 const selfTestXlsx = buildXlsx("测试", ["电池", "MAH", "数量"], [["456495", "3200", 1]], { customer: "", date: today(), order: "" });
 document.documentElement.dataset.xlsxCheck = `${selfTestXlsx[0]},${selfTestXlsx[1]},${selfTestXlsx[2]},${selfTestXlsx[3]}:${selfTestXlsx.length}`;
