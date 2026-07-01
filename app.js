@@ -88,16 +88,57 @@ function findRecord(query) {
 function runQuery() {
   const queries = [...new Set(els.query.value.split(/\r?\n/).map(text).filter(Boolean))];
   if (!queries.length) return showToast("请先输入要查询的型号或尺寸");
-  state.rows = queries.map((query, index) => {
-    const record = findRecord(query);
-    return record ? {
-      id: `${Date.now()}-${index}`, query, model: record.model, size: record.size, appearance: record.appearance,
-      capacity: record.capacity, basePrice: record.price, finalPrice: record.price, quantity: "", found: true
-    } : { id: `${Date.now()}-${index}`, query, model: "未找到", size: "", appearance: "", capacity: "", basePrice: "", finalPrice: "", quantity: "", found: false };
-  });
+  state.rows = groupQueryMatches(queries.map((query) => ({ query, record: findRecord(query) })));
   render();
-  const found = state.rows.filter((row) => row.found).length;
-  showToast(`查询完成：找到 ${found} 条，未找到 ${state.rows.length - found} 条`);
+  const foundModels = state.rows.filter((row) => row.found).reduce((sum, row) => sum + row.models.length, 0);
+  const missing = state.rows.filter((row) => !row.found).length;
+  showToast(`查询完成：找到 ${foundModels} 个型号，合并为 ${state.rows.filter((row) => row.found).length} 行，未找到 ${missing} 个`);
+}
+
+function uniqueJoined(records, field) {
+  return [...new Set(records.map((record) => text(record[field])).filter(Boolean))].join("/");
+}
+
+function groupQueryMatches(matches) {
+  const result = [], groupIndexes = new Map();
+  for (const { query, record } of matches) {
+    if (!record) {
+      result.push({
+        id: `query-${Date.now()}-${result.length}`, query, queries: [query], model: "未找到", models: [],
+        size: "", appearance: "", capacity: "", basePrice: "", finalPrice: "", quantity: "", found: false
+      });
+      continue;
+    }
+    const groupKey = record.size ? `size:${normalize(record.size)}` : `model:${normalize(record.model)}`;
+    if (!groupIndexes.has(groupKey)) {
+      const row = {
+        id: `query-${Date.now()}-${result.length}`, query, queries: [query], model: record.model, models: [record.model],
+        records: [record], size: record.size, appearance: record.appearance, capacity: record.capacity,
+        basePrice: record.price, finalPrice: record.price, quantity: "", found: true
+      };
+      groupIndexes.set(groupKey, result.length);
+      result.push(row);
+      continue;
+    }
+    const row = result[groupIndexes.get(groupKey)];
+    if (!row.queries.includes(query)) row.queries.push(query);
+    if (!row.models.includes(record.model)) row.models.push(record.model);
+    row.records.push(record);
+    row.query = row.queries.join("/");
+    row.model = row.models.join("/");
+    row.appearance = uniqueJoined(row.records, "appearance");
+    row.capacity = uniqueJoined(row.records, "capacity");
+    row.basePrice = uniqueJoined(row.records, "price");
+    row.finalPrice = row.basePrice;
+  }
+  return result;
+}
+
+function expandModelRows(rows) {
+  return rows.filter((row) => row.found).flatMap((row) => {
+    const models = row.models?.length ? row.models : [row.model];
+    return models.map((model) => ({ ...row, model, query: model, models: [model] }));
+  });
 }
 
 function render() {
@@ -111,12 +152,13 @@ function render() {
       <td><input inputmode="decimal" data-field="quantity" value="${xml(row.quantity)}" placeholder="0" ${row.found ? "" : "disabled"}></td>
       <td><button class="remove-btn" data-action="remove" title="移除">删除</button></td></tr>`).join("");
   }
-  els.count.textContent = `${state.rows.length} 条`;
+  const modelCount = state.rows.filter((row) => row.found).reduce((sum, row) => sum + row.models.length, 0);
+  els.count.textContent = `${state.rows.length} 行 · ${modelCount} 个型号`;
   updateSummary();
 }
 
 function updateSummary() {
-  const valid = state.rows.filter((row) => row.found);
+  const valid = expandModelRows(state.rows);
   const qty = valid.reduce((sum, row) => sum + number(row.quantity), 0);
   const amount = valid.reduce((sum, row) => {
     const price = optionalNumber(row.finalPrice);
@@ -148,8 +190,9 @@ function documentRows() {
 }
 
 function exportDelivery() {
-  const rows = documentRows();
-  if (!rows.length) return;
+  const groupedRows = documentRows();
+  if (!groupedRows.length) return;
+  const rows = expandModelRows(groupedRows);
   const values = rows.map((row) => {
     const price = optionalNumber(row.finalPrice);
     const quantity = optionalNumber(row.quantity);
@@ -165,8 +208,9 @@ function exportDelivery() {
 }
 
 function exportPickup() {
-  const rows = documentRows();
-  if (!rows.length) return;
+  const groupedRows = documentRows();
+  if (!groupedRows.length) return;
+  const rows = expandModelRows(groupedRows);
   const grouped = new Map();
   for (const row of rows) {
     const battery = row.size || row.model;
@@ -460,10 +504,20 @@ els.counterBody.addEventListener("click", (event) => {
 for (const navItem of document.querySelectorAll(".nav-item")) navItem.addEventListener("click", () => switchView(navItem.dataset.view));
 els.date.value = today();
 els.counterDate.value = today();
-window.__quoteApp = { state, runQuery, buildXlsx, findRecord, exportDelivery, exportPickup, parseFirstWorksheet, aggregateCounterRows };
+window.__quoteApp = {
+  state, runQuery, buildXlsx, findRecord, exportDelivery, exportPickup,
+  parseFirstWorksheet, aggregateCounterRows, groupQueryMatches, expandModelRows
+};
 const selfTestXlsx = buildXlsx("测试", ["电池", "MAH", "数量"], [["456495", "3200", 1]], { customer: "", date: today(), order: "" });
 document.documentElement.dataset.xlsxCheck = `${selfTestXlsx[0]},${selfTestXlsx[1]},${selfTestXlsx[2]},${selfTestXlsx[3]}:${selfTestXlsx.length}`;
 if (new URLSearchParams(location.search).has("selftest")) {
+  const queryGroupTest = groupQueryMatches([
+    { query: "SPARK5", record: { model: "SPARK5", size: "456495", appearance: "+", capacity: "3200", price: "52" } },
+    { query: "CAMON15", record: { model: "CAMON15", size: "456495", appearance: "+", capacity: "3200", price: "52" } }
+  ]);
+  const queryExpandTest = expandModelRows(queryGroupTest);
+  document.documentElement.dataset.queryGroupCheck =
+    `${queryGroupTest.length}:${queryGroupTest[0].model}:${queryExpandTest.map((row) => row.model).join(",")}`;
   const aggregateTest = aggregateCounterRows([
     ["电池型号", "电芯尺寸", "MAH", "数量"],
     ["49FT", "456494", "3200", "10"],
