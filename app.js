@@ -106,8 +106,8 @@ function groupQueryMatches(matches) {
   for (const [inputOrder, { query, record }] of matches.entries()) {
     if (!record) {
       result.push({
-        id: `query-${Date.now()}-${result.length}`, query, queries: [query], model: "未找到", models: [],
-        modelEntries: [], size: "", appearance: "", capacity: "", basePrice: "", finalPrice: "", quantity: "", found: false
+        id: `query-${Date.now()}-${result.length}`, query, queries: [query], model: query, models: [query],
+        modelEntries: [{ model: query, query, inputOrder }], size: "", appearance: "", capacity: "", basePrice: "", finalPrice: "", quantity: "", found: false
       });
       continue;
     }
@@ -139,7 +139,8 @@ function groupQueryMatches(matches) {
 }
 
 function expandModelRows(rows) {
-  return rows.filter((row) => row.found).flatMap((row, rowOrder) => {
+  return rows.flatMap((row, rowOrder) => {
+
     const entries = row.modelEntries?.length
       ? row.modelEntries
       : (row.models?.length ? row.models : [row.model]).map((model, index) => ({
@@ -164,13 +165,13 @@ function render() {
       <td>${row.found
         ? `<button class="model-summary" data-model-row="${row.id}" type="button">${xml(modelSummaryLabel(row.models))}</button>`
         : `<span class="not-found">未找到：${xml(row.query)}</span>`}</td>
-      <td><input data-field="size" value="${xml(row.size)}" placeholder="填写尺寸" ${row.found ? "" : "disabled"}></td>
-      <td><input class="capacity-input" data-field="capacity" value="${xml(row.capacity)}" placeholder="填写容量" ${row.found ? "" : "disabled"}></td>
-      <td><input class="price-input" data-field="finalPrice" value="${xml(row.finalPrice)}" placeholder="填写单价" ${row.found ? "" : "disabled"}></td>
-      <td><input inputmode="decimal" data-field="quantity" value="${xml(row.quantity)}" placeholder="0" ${row.found ? "" : "disabled"}></td>
+      <td><input data-field="size" value="${xml(row.size)}" placeholder="填写尺寸" ></td>
+      <td><input class="capacity-input" data-field="capacity" value="${xml(row.capacity)}" placeholder="填写容量" ></td>
+      <td><input class="price-input" data-field="finalPrice" value="${xml(row.finalPrice)}" placeholder="填写单价" ></td>
+      <td><input inputmode="decimal" data-field="quantity" value="${xml(row.quantity)}" placeholder="0"></td>
       <td><button class="remove-btn" data-action="remove" title="移除">删除</button></td></tr>`).join("");
   }
-  const modelCount = state.rows.filter((row) => row.found).reduce((sum, row) => sum + row.models.length, 0);
+  const modelCount = state.rows.reduce((sum, row) => sum + row.models.length, 0);
   els.count.textContent = `${state.rows.length} 行 · ${modelCount} 个型号`;
   updateSummary();
 }
@@ -260,27 +261,40 @@ els.copyModels.addEventListener("click", async () => {
 });
 
 function documentRows() {
-  const rows = state.rows.filter((row) => row.found);
+  const rows = state.rows;
   if (!rows.length) showToast("没有可生成单据的查询结果");
   return rows;
 }
 
 function buildCopyQuoteText(rows) {
-  return expandModelRows(rows).map((row) =>
-    `${text(row.query || row.model)}-${text(row.size)}/${text(row.capacity)}-${text(row.finalPrice)}`
-  ).join("\n");
+  return expandModelRows(rows).map((row) =>{
+    const query = text(row.query || row.model);
+    const size = text(row.size);
+    // 如果 size 为空，直接输出 “型号-查不到”
+    if (!size) {
+      return `${query}-查不到`;
+    }
+    // 否则正常输出
+    return `${query}-${size}/${text(row.capacity)}-${text(row.finalPrice)}`;
+  }).join("\n");
 }
 
-async function copyQuote() {
+async function copyQuote() { 
   const groupedRows = documentRows();
   if (!groupedRows.length) return;
-  const incomplete = groupedRows.some((row) =>
-    !text(row.size) || !text(row.capacity) || !text(row.finalPrice)
+  const validRows = groupedRows.filter((row) => {
+    return text(row.model) || text(row.size) || text(row.capacity) || text(row.finalPrice);
+  });
+  if (!validRows.length) {
+    return showToast("没有可复制的有效报价内容");
+  }
+  const rows = expandModelRows(validRows);
+  const copied = await copyText(buildCopyQuoteText(validRows));
+  showToast(
+    copied 
+      ? `已复制 ${rows.length} 个型号报价` 
+      : "复制失败，请允许浏览器访问剪贴板"
   );
-  if (incomplete) return showToast("请先填写完整的尺寸、容量和单价");
-  const rows = expandModelRows(groupedRows);
-  const copied = await copyText(buildCopyQuoteText(groupedRows));
-  showToast(copied ? `已复制 ${rows.length} 个型号报价` : "复制失败，请允许浏览器访问剪贴板");
 }
 
 function exportDelivery() {
