@@ -162,14 +162,14 @@ function render() {
     els.body.innerHTML = '<tr class="empty-row"><td colspan="6">输入型号后开始查询</td></tr>';
   } else {
     els.body.innerHTML = state.rows.map((row) => `<tr data-id="${row.id}">
-      <td>${row.found
+      <td class="model-cell" data-label="型号详情">${row.found
         ? `<button class="model-summary" data-model-row="${row.id}" type="button">${xml(modelSummaryLabel(row.models))}</button>`
         : `<span class="not-found">未找到：${xml(row.query)}</span>`}</td>
-      <td><input data-field="size" value="${xml(row.size)}" placeholder="填写尺寸" ></td>
-      <td><input class="capacity-input" data-field="capacity" value="${xml(row.capacity)}" placeholder="填写容量" ></td>
-      <td><input class="price-input" data-field="finalPrice" value="${xml(row.finalPrice)}" placeholder="填写单价" ></td>
-      <td><input inputmode="decimal" data-field="quantity" value="${xml(row.quantity)}" placeholder="0"></td>
-      <td><button class="remove-btn" data-action="remove" title="移除">删除</button></td></tr>`).join("");
+      <td data-label="尺寸"><input data-field="size" value="${xml(row.size)}" placeholder="填写尺寸"  aria-label="尺寸" inputmode="text"></td>
+      <td data-label="容量"><input class="capacity-input" data-field="capacity" value="${xml(row.capacity)}" placeholder="填写容量"  aria-label="容量" inputmode="text"></td>
+      <td data-label="单价"><input class="price-input" data-field="finalPrice" value="${xml(row.finalPrice)}" placeholder="填写单价"  aria-label="单价" inputmode="decimal"></td>
+      <td data-label="数量"><input data-field="quantity" value="${xml(row.quantity)}" placeholder="0" aria-label="数量" inputmode="decimal"></td>
+      <td class="row-actions"><button type="button" class="remove-btn" data-action="remove" title="移除">删除</button></td></tr>`).join("");
   }
   const modelCount = state.rows.reduce((sum, row) => sum + row.models.length, 0);
   els.count.textContent = `${state.rows.length} 行 · ${modelCount} 个型号`;
@@ -187,6 +187,29 @@ function updateSummary() {
   els.amount.textContent = `¥${amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   els.delivery.disabled = els.pickup.disabled = !valid.length;
 }
+
+function navigateTableInput(event) {
+  // Let input methods finish choosing Chinese text before moving focus.
+  if (event.isComposing || event.keyCode === 229 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+  if (!["Enter", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+  const input = event.target;
+  if (!input.matches("input[data-field], input[data-counter-field]")) return;
+  const attribute = input.hasAttribute("data-field") ? "data-field" : "data-counter-field";
+  const field = input.getAttribute(attribute);
+  const row = input.closest("tr");
+  if (!row) return;
+  event.preventDefault();
+  const nextRow = event.key === "ArrowUp" ? row.previousElementSibling : row.nextElementSibling;
+  const nextInput = nextRow && Array.from(nextRow.querySelectorAll(`input[${attribute}]`))
+    .find((candidate) => candidate.getAttribute(attribute) === field && !candidate.disabled && !candidate.readOnly);
+  if (!nextInput) return;
+  nextInput.focus({ preventScroll: true });
+  nextInput.select();
+  nextInput.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+els.body.addEventListener("keydown", navigateTableInput);
+els.counterBody.addEventListener("keydown", navigateTableInput);
 
 els.body.addEventListener("input", (event) => {
   const rowElement = event.target.closest("tr[data-id]");
@@ -233,6 +256,17 @@ els.body.addEventListener("mouseout", (event) => {
 els.body.addEventListener("focusin", (event) => {
   const target = event.target.closest(".model-summary");
   if (target) showModelCard(target);
+});
+els.body.addEventListener("click", (event) => {
+  const target = event.target.closest(".model-summary");
+  if (target) showModelCard(target);
+});
+$("#closeModelsBtn").addEventListener("click", () => {
+  clearTimeout(modelCardTimer);
+  els.modelHoverCard.hidden = true;
+});
+els.modelHoverCard.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") els.modelHoverCard.hidden = true;
 });
 els.modelHoverCard.addEventListener("mouseenter", () => clearTimeout(modelCardTimer));
 els.modelHoverCard.addEventListener("mouseleave", scheduleHideModelCard);
@@ -535,11 +569,11 @@ function renderCounter() {
     els.counterBody.innerHTML = '<tr class="empty-row"><td colspan="5">导入 Excel 后显示汇总结果</td></tr>';
   } else {
     els.counterBody.innerHTML = state.counterRows.map((row) => `<tr data-counter-id="${row.id}">
-      <td><input data-counter-field="battery" value="${xml(row.battery)}"></td>
-      <td><input data-counter-field="capacity" value="${xml(row.capacity)}"></td>
-      <td><input data-counter-field="quantity" value="${xml(row.quantity)}"></td>
-      <td><input data-counter-field="remark" value="${xml(row.remark)}" placeholder="电池型号备注"></td>
-      <td><button class="remove-btn" data-counter-action="remove">删除</button></td></tr>`).join("");
+      <td data-label="电池"><input data-counter-field="battery" value="${xml(row.battery)}" aria-label="电池" inputmode="text"></td>
+      <td data-label="MAH"><input data-counter-field="capacity" value="${xml(row.capacity)}" aria-label="MAH" inputmode="text"></td>
+      <td data-label="数量"><input data-counter-field="quantity" value="${xml(row.quantity)}" aria-label="数量" inputmode="decimal"></td>
+      <td data-label="备注" class="remark-cell"><input data-counter-field="remark" value="${xml(row.remark)}" placeholder="电池型号备注" aria-label="备注" inputmode="text"></td>
+      <td class="row-actions"><button type="button" class="remove-btn" data-counter-action="remove">删除</button></td></tr>`).join("");
   }
   els.counterCount.textContent = `${state.counterRows.length} 条`;
   els.counterPickup.disabled = !state.counterRows.length;

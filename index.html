@@ -2,10 +2,10 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b6bcb">
   <title>电芯报价查询</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260920-ocr">
 </head>
 <body>
   <header class="topbar">
@@ -25,6 +25,13 @@
       </div>
       <label for="queryInput">每行输入一个手机型号或电芯尺寸</label>
       <textarea id="queryInput" rows="6" placeholder="例如：&#10;iPhone 15&#10;SPARK5&#10;456495"></textarea>
+      <div class="ocr-tools">
+        <button id="ocrPasteBtn" class="button secondary" type="button">粘贴图片识别</button>
+        <button id="ocrImageBtn" class="button ghost" type="button">图片识别填入</button>
+        <input id="ocrImageInput" type="file" accept="image/png,image/jpeg,image/webp,image/bmp" hidden>
+        <span class="muted">复制图片或截图后，直接按 Ctrl+V（Mac：⌘V），或点击“粘贴图片识别”；也可选择图片。</span>
+      </div>
+      <p id="ocrStatus" class="muted ocr-status" role="status" aria-live="polite">识别英文字母、数字型号；每行一个，自动追加。图片在本机处理，首次使用需联网加载。请核对后查询。</p>
       <div class="query-actions">
         <span id="queryHint" class="muted">忽略空格和大小写；相同尺寸合并填写，导出送货单时按型号展开</span>
         <div class="inline-actions">
@@ -113,12 +120,13 @@
   </nav>
 
   <div id="modelHoverCard" class="model-hover-card" hidden>
-    <div class="model-hover-heading"><strong>完整型号详情</strong><button id="copyModelsBtn" type="button">复制全部</button></div>
+    <div class="model-hover-heading"><strong>完整型号详情</strong><div class="inline-actions"><button id="copyModelsBtn" type="button">复制全部</button><button id="closeModelsBtn" type="button" aria-label="关闭型号详情">关闭</button></div></div>
     <textarea id="modelHoverText" readonly aria-label="完整型号详情"></textarea>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <footer>网页仅包含公开报价数据，不包含库存、仓库位置及客户历史记录。</footer>
-  <script src="app.js?v=20260701-copyquote2"></script>
+  <script src="app.js?v=20260920-keyboard"></script>
+  <script src="ocr.js?v=20260921-paste"></script>
 </body>
 </html>
