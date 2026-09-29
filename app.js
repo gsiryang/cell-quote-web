@@ -167,8 +167,8 @@ function render() {
         : `<span class="not-found">未找到：${xml(row.query)}</span>`}</td>
       <td data-label="尺寸"><input data-field="size" value="${xml(row.size)}" placeholder="填写尺寸"  aria-label="尺寸" inputmode="text"></td>
       <td data-label="容量"><input class="capacity-input" data-field="capacity" value="${xml(row.capacity)}" placeholder="填写容量"  aria-label="容量" inputmode="text"></td>
-      <td data-label="单价"><input class="price-input" data-field="finalPrice" value="${xml(row.finalPrice)}" placeholder="填写单价"  aria-label="单价" inputmode="decimal"></td>
-      <td data-label="数量"><input data-field="quantity" value="${xml(row.quantity)}" placeholder="0" aria-label="数量" inputmode="decimal"></td>
+      <td data-label="单价"><input class="price-input" data-field="finalPrice" value="${xml(row.finalPrice)}" placeholder="填写单价"  aria-label="单价" inputmode="text"></td>
+      <td data-label="数量"><input data-field="quantity" value="${xml(row.quantity)}" placeholder="0" aria-label="数量" inputmode="text"></td>
       <td class="row-actions"><button type="button" class="remove-btn" data-action="remove" title="移除">删除</button></td></tr>`).join("");
   }
   const modelCount = state.rows.reduce((sum, row) => sum + row.models.length, 0);
@@ -571,7 +571,7 @@ function renderCounter() {
     els.counterBody.innerHTML = state.counterRows.map((row) => `<tr data-counter-id="${row.id}">
       <td data-label="电池"><input data-counter-field="battery" value="${xml(row.battery)}" aria-label="电池" inputmode="text"></td>
       <td data-label="MAH"><input data-counter-field="capacity" value="${xml(row.capacity)}" aria-label="MAH" inputmode="text"></td>
-      <td data-label="数量"><input data-counter-field="quantity" value="${xml(row.quantity)}" aria-label="数量" inputmode="decimal"></td>
+      <td data-label="数量"><input data-counter-field="quantity" value="${xml(row.quantity)}" aria-label="数量" inputmode="text"></td>
       <td data-label="备注" class="remark-cell"><input data-counter-field="remark" value="${xml(row.remark)}" placeholder="电池型号备注" aria-label="备注" inputmode="text"></td>
       <td class="row-actions"><button type="button" class="remove-btn" data-counter-action="remove">删除</button></td></tr>`).join("");
   }
