@@ -80,19 +80,44 @@ function quoteRecordsFromRows(rows) {
 function findRecord(query) {
   const key = normalize(query);
   if (!key) return null;
-  if (state.modelIndex.has(key) && text(state.modelIndex.get(key).size)) return state.modelIndex.get(key);
-  if (state.sizeIndex.has(key)) return state.sizeIndex.get(key);
   if (state.modelIndex.has(key)) return state.modelIndex.get(key);
-  const candidates = state.records.filter((record) => record.key.includes(key) || key.includes(record.key));
-  return candidates.length === 1 ? candidates[0] : null;
+  if (state.sizeIndex.has(key)) return state.sizeIndex.get(key);
+  return null;
 }
 
+// Excel uses tab-separated cells and quotes cells containing embedded newlines.
+function parseQueryInput(value) {
+  const cells = [];
+  let cell = "", quoted = false;
+  const source = String(value).replace(/\r\n?/g, "\n").replace(/[\u200B\uFEFF]/g, "");
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i];
+    if (char === '"' && (quoted || !cell)) {
+      if (quoted && source[i + 1] === '"') { cell += '"'; i++; }
+      else quoted = !quoted;
+    } else if (!quoted && (char === "\t" || char === "\n")) {
+      cells.push(cell); cell = "";
+    } else cell += char;
+  }
+  cells.push(cell);
+  return cells.flatMap((item) => item.split("\n")).map(text).filter(Boolean);
+}
+
+els.query.addEventListener("paste", (event) => {
+  const plain = event.clipboardData?.getData("text/plain");
+  if (!plain) return;
+  event.preventDefault();
+  const content = parseQueryInput(plain).join("\n");
+  els.query.setRangeText(content, els.query.selectionStart, els.query.selectionEnd, "end");
+  els.query.dispatchEvent(new Event("input", { bubbles: true }));
+});
+
 function runQuery() {
-  const queries = [...new Set(els.query.value.split(/\r?\n/).map(text).filter(Boolean))];
+  const queries = parseQueryInput(els.query.value);
   if (!queries.length) return showToast("请先输入要查询的型号或尺寸");
   state.rows = groupQueryMatches(queries.map((query) => ({ query, record: findRecord(query) })));
   render();
-  const foundModels = state.rows.filter((row) => row.found).reduce((sum, row) => sum + row.models.length, 0);
+  const foundModels = state.rows.filter((row) => row.found).reduce((sum, row) => sum + (row.modelEntries?.length || row.models.length), 0);
   const missing = state.rows.filter((row) => !row.found).length;
   showToast(`查询完成：找到 ${foundModels} 个型号，合并为 ${state.rows.filter((row) => row.found).length} 行，未找到 ${missing} 个`);
 }
@@ -127,8 +152,8 @@ function groupQueryMatches(matches) {
     if (!row.queries.includes(query)) row.queries.push(query);
     if (!row.models.includes(record.model)) {
       row.models.push(record.model);
-      row.modelEntries.push({ model: record.model, query, inputOrder });
     }
+    row.modelEntries.push({ model: record.model, query, inputOrder });
     row.records.push(record);
     row.query = row.queries.join("/");
     row.model = row.models.join("/");
@@ -171,7 +196,7 @@ function render() {
       <td data-label="数量"><input data-field="quantity" value="${xml(row.quantity)}" placeholder="0" aria-label="数量" inputmode="text"></td>
       <td class="row-actions"><button type="button" class="remove-btn" data-action="remove" title="移除">删除</button></td></tr>`).join("");
   }
-  const modelCount = state.rows.reduce((sum, row) => sum + row.models.length, 0);
+  const modelCount = state.rows.reduce((sum, row) => sum + (row.modelEntries?.length || row.models.length), 0);
   els.count.textContent = `${state.rows.length} 行 · ${modelCount} 个型号`;
   updateSummary();
 }

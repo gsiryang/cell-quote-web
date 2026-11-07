@@ -31,9 +31,9 @@
         <input id="ocrImageInput" type="file" accept="image/png,image/jpeg,image/webp,image/bmp" hidden>
         <span class="muted">复制图片或截图后，直接按 Ctrl+V（Mac：⌘V），或点击“粘贴图片识别”；也可选择图片。</span>
       </div>
-      <p id="ocrStatus" class="muted ocr-status" role="status" aria-live="polite">识别英文字母、数字型号；每行一个，自动追加。图片在本机处理，首次使用需联网加载。请核对后查询。</p>
+      <p id="ocrStatus" class="muted ocr-status" role="status" aria-live="polite">识别英文字母、数字型号；每行一个，自动追加并保留重复项。图片在本机处理，首次使用需联网加载。请核对后查询。</p>
       <div class="query-actions">
-        <span id="queryHint" class="muted">忽略空格和大小写；相同尺寸合并填写，导出送货单时按型号展开</span>
+        <span id="queryHint" class="muted">精确匹配（忽略空格和大小写）；重复型号保留原顺序。相同尺寸合并填写，送货单逐条展开。Excel 请复制型号列直接粘贴。</span>
         <div class="inline-actions">
           <a class="button ghost link-button" href="data/网页报价数据.xlsx" download>下载报价表</a>
           <button id="queryBtn" class="button primary" type="button">开始查询</button>
@@ -126,7 +126,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <footer>网页仅包含公开报价数据，不包含库存、仓库位置及客户历史记录。</footer>
-  <script src="app.js?v=20260929-text-keyboard"></script>
-  <script src="ocr.js?v=20260921-paste"></script>
+  <script src="app.js?v=20261107-exact-query"></script>
+  <script src="ocr.js?v=20261107-text-paste"></script>
 </body>
 </html>

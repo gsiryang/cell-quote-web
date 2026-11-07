@@ -9,14 +9,7 @@
   }
 
   function appendLines(current, lines) {
-    const key = (line) => line.replace(/\s+/g, "").toLowerCase();
-    const seen = new Set(String(current).split(/\r?\n/).map(key));
-    const added = lines.filter((line) => {
-      if (seen.has(key(line))) return false;
-      seen.add(key(line));
-      return true;
-    });
-    return { value: added.length ? [current.trimEnd(), ...added].filter(Boolean).join("\n") : current, count: added.length };
+    return { value: lines.length ? [current.trimEnd(), ...lines].filter(Boolean).join("\n") : current, count: lines.length };
   }
 
   // Remove only near-continuous full-width/full-height ruling lines, not glyph strokes.
@@ -195,7 +188,7 @@
       const merged = appendLines(query.value, lines);
       query.value = merged.value;
       query.dispatchEvent(new Event("input", { bubbles: true }));
-      status.textContent = `识别到 ${lines.length} 行，已追加 ${merged.count} 行（重复项已跳过）。请核对字母与数字，尤其是 O/0、S/5，再点击“开始查询”。`;
+      status.textContent = `识别到 ${lines.length} 行，已追加 ${merged.count} 行（重复型号按原顺序保留）。请核对字母与数字，尤其是 O/0、S/5，再点击“开始查询”。`;
     } catch (error) {
       status.textContent = `${error.message || "识别失败，请检查网络和图片后重试"}。原有输入已保留。`;
     } finally {
@@ -250,6 +243,8 @@
     // Preserve ordinary pasting in customer, price and other editable fields.
     const editable = event.target.closest?.("input, textarea, [contenteditable]:not([contenteditable='false'])");
     if (editable && editable !== query) return;
+    // Excel often supplies both text and an image: never OCR its text paste.
+    if (event.clipboardData?.getData?.("text/plain")) return;
     const item = Array.from(event.clipboardData?.items || []).find((entry) => entry.type.startsWith("image/"));
     const file = item?.getAsFile() || Array.from(event.clipboardData?.files || []).find((entry) => entry.type.startsWith("image/"));
     if (!file) return;
